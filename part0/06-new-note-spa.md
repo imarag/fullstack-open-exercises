@@ -1,4 +1,6 @@
 ```mermaid
+    sequenceDiagram
+    participant browser
     participant server
         Note right of browser: User adds a new note and submit
         Note right of browser: Form does not have a method or action attributes
