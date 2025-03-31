@@ -1,0 +1,10 @@
+ul[role="list"] {
+    list-style-type: none;
+    margin: 1rem 0;
+    padding: 0;
+}
+
+.flag {
+    margin: 0px;
+    font-size: 20rem;
+}
