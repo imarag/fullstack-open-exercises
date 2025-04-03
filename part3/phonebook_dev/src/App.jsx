@@ -16,6 +16,7 @@ const App = () => {
 
   useEffect(() => {
     notes.getAllPersons().then((data) => {
+      console.log(data, "&&&&&&&");
       setPersons(data);
     });
   }, []);
@@ -25,17 +26,17 @@ const App = () => {
 
     const currentPerson = persons.find((el) => el.name === newName);
 
-    const newPerson = {
-      name: newName,
-      number: newNumber,
-    };
-
     if (currentPerson && newNumber === currentPerson.number) {
       alert(
         `${newName} is already added to phonebook with that number and name!`
       );
       return;
     }
+
+    const newPerson = {
+      name: newName,
+      number: newNumber,
+    };
 
     if (currentPerson) {
       const userExistsConfirmation = window.confirm(
@@ -59,7 +60,7 @@ const App = () => {
           })
           .catch((error) => {
             setErrorMessage(
-              `Information for ${currentPerson.name} has already been removed from server`
+              `Information for ${newName} has already been removed from server`
             );
             setTimeout(() => {
               setErrorMessage(null);

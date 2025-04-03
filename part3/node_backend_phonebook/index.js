@@ -98,8 +98,7 @@ app.post("/api/persons", (request, response) => {
         "id": generateRandomId()
     }
 
-    persons = [...persons, newPerson]
-    return response.json(persons)
+    return response.json(newPerson)
 })
 
 const PORT = process.env.PORT || 3001
