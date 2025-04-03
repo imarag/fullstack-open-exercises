@@ -1,0 +1,19 @@
+{
+  "name": "backend_telephone",
+  "version": "1.0.0",
+  "description": "a backend functionality to extract the persons of the catalogue",
+  "license": "ISC",
+  "author": "ioannis maragkakis",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "morgan": "^1.10.0"
+  }
+}
