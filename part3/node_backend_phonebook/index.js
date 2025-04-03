@@ -101,6 +101,30 @@ app.post("/api/persons", (request, response) => {
     return response.json(newPerson)
 })
 
+
+// const updatePerson = (personId, newPerson) => {
+//     const request = axios.put(`${baseUrl}/${personId}`, newPerson);
+//     return request.then(response => response.data)
+
+app.put("/api/persons/:id", (request, response) => {
+    const body = request.body
+    const personId = request.params.id
+
+    if (!body.name || !body.number) {
+        return response.status(404).json({ error: "Name or phone number are missing!" })
+    }
+
+    const newPerson = {
+        "name": body.name || "Person Name",
+        "number": body.number || "00000000",
+        "id": personId
+    }
+
+    persons = persons.map(person => person.id === personId ? newPerson : person)
+
+    return response.json(newPerson)
+})
+
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
