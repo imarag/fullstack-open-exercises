@@ -10,6 +10,9 @@ console.log("Connected to the database...")
 express = require("express")
 var morgan = require('morgan')
 
+const fs = require('fs')
+console.log(fs.existsSync('./dist') ? '✅ dist folder exists' : '❌ dist folder not found')
+
 app = express()
 app.use(express.static('dist'))
 app.use(express.json())
