@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+
 import Filter from "./components/Filter";
 import PersonForm from "./components/PersonForm";
 import Persons from "./components/Persons";
 import Notification from "./components/Notification";
-import notes from "./services/notes";
+
+import personsAPI from "./services/personsAPI";
+
 import "./index.css";
 
 const App = () => {
@@ -15,8 +18,7 @@ const App = () => {
   const [errorMessage, setErrorMessage] = useState(null);
 
   useEffect(() => {
-    notes.getAllPersons().then((data) => {
-      console.log(data, "&&&&&&&");
+    personsAPI.getAllPersons().then((data) => {
       setPersons(data);
     });
   }, []);
@@ -45,12 +47,12 @@ const App = () => {
       if (!userExistsConfirmation) {
         return;
       } else {
-        notes
+        personsAPI
           .updatePerson(currentPerson.id, newPerson)
           .then((data) => {
             setPersons(
-              persons.map((person) =>
-                person.id === currentPerson.id ? data : person
+              persons.map((updatedPerson) =>
+                updatedPerson.id === currentPerson.id ? data : updatedPerson
               )
             );
             setSuccessMessage(`Updated ${data.name}`);
@@ -59,6 +61,7 @@ const App = () => {
             }, 5000);
           })
           .catch((error) => {
+            console.log(error.message);
             setErrorMessage(
               `Information for ${newName} has already been removed from server`
             );
@@ -70,15 +73,24 @@ const App = () => {
       }
     }
 
-    notes.createPerson(newPerson).then((data) => {
-      setPersons([...persons, data]);
-      setNewName("");
-      setNewNumber("");
-      setSuccessMessage(`Added ${data.name}`);
-      setTimeout(() => {
-        setSuccessMessage(null);
-      }, 5000);
-    });
+    personsAPI
+      .createPerson(newPerson)
+      .then((createdPerson) => {
+        setPersons([...persons, createdPerson]);
+        setNewName("");
+        setNewNumber("");
+        setSuccessMessage(`Added ${createdPerson.name}`);
+        setTimeout(() => {
+          setSuccessMessage(null);
+        }, 5000);
+      })
+      .catch((error) => {
+        const errorMessage = error.response.data.error;
+        setErrorMessage(errorMessage);
+        setTimeout(() => {
+          setErrorMessage(null);
+        }, 5000);
+      });
   }
 
   function handleDeletePerson(personId) {
@@ -87,9 +99,9 @@ const App = () => {
     if (!deleteConfirm) {
       return;
     }
-    notes.deletePerson(personId).then((data) => {
-      console.log(data);
-      setPersons(persons.filter((person) => person.id !== personId));
+    personsAPI.deletePerson(personId).then((res) => {
+      const newPersons = persons.filter((person) => person.id !== personId);
+      setPersons(newPersons);
     });
   }
 
