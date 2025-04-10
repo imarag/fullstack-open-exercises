@@ -21,7 +21,6 @@ Thumbs.db
 .npm
 
 # Build output
-dist/
 build/
 
 # IDEs/editors
