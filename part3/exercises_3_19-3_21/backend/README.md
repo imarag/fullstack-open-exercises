@@ -1,3 +1,3 @@
-https://fullstack-open-exercises-066l.onrender.com
+https://fullstack-open-exercises-mongo.onrender.com
 
 built with render.
