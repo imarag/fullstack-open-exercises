@@ -1,0 +1,29 @@
+{
+  "name": "blog_app",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "node --test",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-json": "^1.0.0",
+    "express-static": "^1.2.6",
+    "lodash": "^4.17.23",
+    "mongoose": "^9.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.3",
+    "globals": "^17.4.0"
+  }
+}
