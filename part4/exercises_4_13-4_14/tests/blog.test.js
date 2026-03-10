@@ -95,61 +95,68 @@ describe('most likes', () => {
     })
 })
 
-test('GET /api/blogs correct number of blogs', async () => {
-    const response = await api.get('/api/blogs')
+describe('test that', () => {
+    test('GET /api/blogs returns correct number of blogs', async () => {
+        const response = await api
+            .get('/api/blogs')
+            .expect(200)
+            .expect('Content-Type', /application\/json/)
 
-    assert.strictEqual(Array.isArray(response.body), true)
-    assert.strictEqual(response.body.length, initialBlogs.length)
-})
+        assert.strictEqual(Array.isArray(response.body), true)
+        assert.strictEqual(response.body.length, initialBlogs.length)
+    })
 
-test('test blog id name', async () => {
-    const response = await api.get('/api/blogs')
-    const blogs = response.body
-    const containAllIdName = blogs.every((blog) => 'id' in blog)
+    test('blog has an identifier of name "id"', async () => {
+        const response = await api.get('/api/blogs')
+        const blogs = response.body
+        const containAllIdName = blogs.every((blog) => 'id' in blog)
 
-    assert.strictEqual(containAllIdName, true)
-})
+        assert.strictEqual(containAllIdName, true)
+    })
 
-test('a valid blog can be added', async () => {
-    const newBlog = {
-        title: 'Prog Language',
-        author: 'Ioannis Maragkakis',
-        likes: 2,
-        url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
-    }
+    test('a valid blog can be added', async () => {
+        const newBlog = {
+            title: 'Prog Language',
+            author: 'Ioannis Maragkakis',
+            likes: 2,
+            url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
+        }
 
-    await api
-        .post('/api/blogs')
-        .send(newBlog)
-        .expect(201)
-        .expect('Content-Type', /application\/json/)
+        await api
+            .post('/api/blogs')
+            .send(newBlog)
+            .expect(201)
+            .expect('Content-Type', /application\/json/)
 
-    const blogsAfter = await blogsInDb()
+        const blogsAfter = await blogsInDb()
 
-    assert.strictEqual(blogsAfter.length, initialBlogs.length + 1)
+        assert.strictEqual(blogsAfter.length, initialBlogs.length + 1)
 
-    const titles = blogsAfter.map((b) => b.title)
+        const titles = blogsAfter.map((b) => b.title)
 
-    assert.ok(titles.includes('Prog Language'))
-})
+        assert.ok(titles.includes('Prog Language'))
+    })
 
-test('verify empty likes default to zero', async () => {
-    const newBlog = {
-        title: 'About earthquakes',
-        author: 'Ioannis Maragkakis',
-        url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
-    }
+    test('empty likes default to zero', async () => {
+        const newBlog = {
+            title: 'About earthquakes',
+            author: 'Ioannis Maragkakis',
+            url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
+        }
 
-    await api
-        .post('/api/blogs')
-        .send(newBlog)
-        .expect(201)
-        .expect('Content-Type', /application\/json/)
+        await api
+            .post('/api/blogs')
+            .send(newBlog)
+            .expect(201)
+            .expect('Content-Type', /application\/json/)
 
-    const blogs = await blogsInDb()
-    const addedPost = blogs.find((blog) => blog.title === 'About earthquakes')
+        const blogs = await blogsInDb()
+        const addedPost = blogs.find(
+            (blog) => blog.title === 'About earthquakes',
+        )
 
-    assert.strictEqual(addedPost.likes, 0)
+        assert.strictEqual(addedPost.likes, 0)
+    })
 })
 
 describe('blog missing key', () => {
@@ -172,6 +179,37 @@ describe('blog missing key', () => {
     })
 })
 
+test('test delete method on single post', async () => {
+    const blogsAtStart = await blogsInDb()
+    const blogToDelete = blogsAtStart[0]
+
+    await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204)
+
+    const blogsAtEnd = await blogsInDb()
+
+    assert.strictEqual(blogsAtEnd.length, blogsAtStart.length - 1)
+
+    const titles = blogsAtEnd.map((b) => b.title)
+
+    assert.ok(!titles.includes(blogToDelete.title))
+})
+
+test.only('test update method likes of a blog can be updated', async () => {
+    const blogsAtStart = await blogsInDb()
+    const blogBefore = blogsAtStart[0]
+
+    const updatedBlog = {
+        likes: 20,
+    }
+
+    await api.put(`/api/blogs/${blogBefore.id}`).send(updatedBlog).expect(200)
+
+    const blogsAtEnd = await blogsInDb()
+
+    const blogAfter = blogsAtEnd.find((blog) => blog.id === blogBefore.id)
+
+    assert.strictEqual(blogAfter.likes, 20)
+})
 after(async () => {
     await mongoose.connection.close()
 })
