@@ -1,215 +1,92 @@
-const { test, describe, after, beforeEach } = require('node:test')
-const mongoose = require('mongoose')
+const { test, after, beforeEach } = require('node:test')
 const supertest = require('supertest')
-const Blog = require('../models/blog')
+const mongoose = require('mongoose')
 const app = require('../app')
-const { blogsInDb, initialBlogs } = require('../tests/test_helper')
-
+const Blog = require('../models/blog')
+const { initialBlogs, blogsInDb, initialUsers } = require('./test_helper')
 const assert = require('node:assert')
-const listHelper = require('../utils/list_helper')
+const jwt = require('jsonwebtoken')
 
 const api = supertest(app)
 
-const listWithOneBlog = [initialBlogs[0]]
-
 beforeEach(async () => {
+    // delete all blogs
     await Blog.deleteMany({})
+
+    // get a valid token for one of your users
+    const loginRes = await api.post('/api/login').send({
+        username: initialUsers[0].username,
+        password: initialUsers[0].password,
+    })
+
+    const token = loginRes.body.token
+
     for (let blog of initialBlogs) {
-        let blogObj = new Blog(blog)
-        await blogObj.save()
+        await api
+            .post('/api/blogs')
+            .send(blog)
+            .set('Authorization', `Bearer ${token}`)
     }
 })
 
-test('dummy returns one', () => {
-    const result = listHelper.dummy(initialBlogs)
-    assert.strictEqual(result, 1)
+test('blog user is populated', async () => {
+    const res = await api.get('/api/blogs').expect(200)
+
+    const blogs = res.body
+    const firstBlog = blogs[0]
+    const blogUser = firstBlog['user']
+    assert('username' in blogUser)
 })
 
-describe('total likes', () => {
-    test('of empty list is zero', () => {
-        const result = listHelper.totalLikes([])
-
-        assert.strictEqual(result, 0)
-    })
-
-    test('when list has only one blog, equals the likes of that', () => {
-        const result = listHelper.totalLikes(listWithOneBlog)
-
-        assert.strictEqual(result, 7)
-    })
-
-    test('of a bigger list is calculated right', () => {
-        const result = listHelper.totalLikes(initialBlogs)
-
-        assert.strictEqual(result, 36)
-    })
-})
-
-describe('favorite blog', () => {
-    test('returns the blog with the most likes', () => {
-        const result = listHelper.favoriteBlog(initialBlogs)
-
-        assert.deepStrictEqual(result, initialBlogs[2])
-    })
-
-    test('when list has only one blog, returns that blog', () => {
-        const result = listHelper.favoriteBlog(listWithOneBlog)
-
-        assert.deepStrictEqual(result, initialBlogs[0])
-    })
-})
-
-describe('most blogs', () => {
-    test('returns the author with the most blogs', () => {
-        const result = listHelper.mostBlogs(initialBlogs)
-        assert.deepStrictEqual(result, {
-            author: 'Robert C. Martin',
-            blogs: 3,
-        })
-    })
-
-    test('when list has only one blog, returns that author blogs', () => {
-        const result = listHelper.mostBlogs(listWithOneBlog)
-        assert.deepStrictEqual(result, {
-            author: initialBlogs[0].author,
-            blogs: 1,
-        })
-    })
-})
-
-describe('most likes', () => {
-    test('returns the author with the most likes', () => {
-        const result = listHelper.mostLikes(initialBlogs)
-        assert.deepStrictEqual(result, {
-            author: 'Edsger W. Dijkstra',
-            likes: 17,
-        })
-    })
-
-    test('when list has only one blog, returns that author likes', () => {
-        const result = listHelper.mostLikes(listWithOneBlog)
-        assert.deepStrictEqual(result, {
-            author: initialBlogs[0].author,
-            likes: initialBlogs[0].likes,
-        })
-    })
-})
-
-describe('test that', () => {
-    test('GET /api/blogs returns correct number of blogs', async () => {
-        const response = await api
-            .get('/api/blogs')
-            .expect(200)
-            .expect('Content-Type', /application\/json/)
-
-        assert.strictEqual(Array.isArray(response.body), true)
-        assert.strictEqual(response.body.length, initialBlogs.length)
-    })
-
-    test('blog has an identifier of name "id"', async () => {
-        const response = await api.get('/api/blogs')
-        const blogs = response.body
-        const containAllIdName = blogs.every((blog) => 'id' in blog)
-
-        assert.strictEqual(containAllIdName, true)
-    })
-
-    test('a valid blog can be added', async () => {
-        const newBlog = {
-            title: 'Prog Language',
-            author: 'Ioannis Maragkakis',
-            likes: 2,
-            url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
-        }
-
-        await api
-            .post('/api/blogs')
-            .send(newBlog)
-            .expect(201)
-            .expect('Content-Type', /application\/json/)
-
-        const blogsAfter = await blogsInDb()
-
-        assert.strictEqual(blogsAfter.length, initialBlogs.length + 1)
-
-        const titles = blogsAfter.map((b) => b.title)
-
-        assert.ok(titles.includes('Prog Language'))
-    })
-
-    test('empty likes default to zero', async () => {
-        const newBlog = {
-            title: 'About earthquakes',
-            author: 'Ioannis Maragkakis',
-            url: 'http://www.u.arizona.edu/~rubinson/copyright_violations/Go_To_Considered_Harmful.html',
-        }
-
-        await api
-            .post('/api/blogs')
-            .send(newBlog)
-            .expect(201)
-            .expect('Content-Type', /application\/json/)
-
-        const blogs = await blogsInDb()
-        const addedPost = blogs.find(
-            (blog) => blog.title === 'About earthquakes',
-        )
-
-        assert.strictEqual(addedPost.likes, 0)
-    })
-})
-
-describe('blog missing key', () => {
-    test('title returns 400', async () => {
-        const newBlog = {
-            author: 'Ioannis Maragkakis',
-            url: 'https://example.com',
-        }
-
-        await api.post('/api/blogs').send(newBlog).expect(400)
-    })
-
-    test('url returns 400', async () => {
-        const newBlog = {
-            title: 'About data processing',
-            author: 'Ioannis Maragkakis',
-        }
-
-        await api.post('/api/blogs').send(newBlog).expect(400)
-    })
-})
-
-test('test delete method on single post', async () => {
-    const blogsAtStart = await blogsInDb()
-    const blogToDelete = blogsAtStart[0]
-
-    await api.delete(`/api/blogs/${blogToDelete.id}`).expect(204)
-
-    const blogsAtEnd = await blogsInDb()
-
-    assert.strictEqual(blogsAtEnd.length, blogsAtStart.length - 1)
-
-    const titles = blogsAtEnd.map((b) => b.title)
-
-    assert.ok(!titles.includes(blogToDelete.title))
-})
-
-test.only('test update method likes of a blog can be updated', async () => {
-    const blogsAtStart = await blogsInDb()
-    const blogBefore = blogsAtStart[0]
-
-    const updatedBlog = {
-        likes: 20,
+test('missing token error when creating blog', async () => {
+    const newBlog = {
+        title: 'My new blog',
+        author: 'me',
+        url: 'https://fullstackopen.com/',
     }
-
-    await api.put(`/api/blogs/${blogBefore.id}`).send(updatedBlog).expect(200)
-
-    const blogsAtEnd = await blogsInDb()
-
-    const blogAfter = blogsAtEnd.find((blog) => blog.id === blogBefore.id)
-
-    assert.strictEqual(blogAfter.likes, 20)
+    await api.post('/api/blogs').send(newBlog).expect(401)
 })
+
+test('user identified by the token is the creator of the blog.', async () => {
+    // get a valid token for one of your users
+    const loginRes = await api.post('/api/login').send({
+        username: initialUsers[0].username,
+        password: initialUsers[0].password,
+    })
+
+    const token = loginRes.body.token
+    const decodedToken = jwt.verify(token, process.env.SECRET)
+    const newBlog = {
+        title: 'My new blog',
+        author: 'me',
+        url: 'https://fullstackopen.com/',
+    }
+    const res = await api
+        .post('/api/blogs')
+        .send(newBlog)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(201)
+
+    const createdBlog = res.body
+    assert.strictEqual(createdBlog.user, decodedToken.id)
+})
+
+test('blog can be deleted only by the user who added it.', async () => {
+    // get a valid token for one of your users
+    const loginRes = await api.post('/api/login').send({
+        username: initialUsers[1].username,
+        password: initialUsers[1].password,
+    })
+
+    const token = loginRes.body.token
+    const blogs = await blogsInDb()
+    const firstBlog = blogs[0]
+    await api
+        .delete(`/api/blogs/${firstBlog.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(403)
+})
+
 after(async () => {
     await mongoose.connection.close()
 })

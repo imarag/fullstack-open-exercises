@@ -8,7 +8,7 @@ blogsRouter.get('/', async (req, res) => {
         name: 1,
         id: 1,
     })
-    res.json(blogs)
+    res.status(200).json(blogs)
 })
 
 blogsRouter.get('/:id', async (req, res) => {
@@ -16,7 +16,9 @@ blogsRouter.get('/:id', async (req, res) => {
     const blog = await Blog.findById(blogId)
 
     if (!blog) {
-        return res.status(404).json({ error: 'Blog does not exist.' })
+        return res
+            .status(404)
+            .json({ error: `Blog with id  ${blogId} does not exist.` })
     }
 
     const returnBlog = await blog.populate('user', {
@@ -27,30 +29,38 @@ blogsRouter.get('/:id', async (req, res) => {
     res.status(200).json(returnBlog)
 })
 
-blogsRouter.post('/', async (req, res) => {
-    const blog = new Blog(req.body)
+blogsRouter.post('/', async (req, res, next) => {
+    try {
+        // get the user doing this request
+        const userId = req.user
+        const { title, author, url, likes } = req.body
 
-    // added token validation in middleware
+        const blog = new Blog({ title, author, url, likes, user: userId })
+        // assign the user id into the user field on the blog
+        blog.user = userId
+        const savedBlog = await blog.save()
 
-    const blogId = blog._id
+        const userInDB = await User.findById(userId)
+        userInDB.blogs = userInDB.blogs.concat(blog._id)
+        await userInDB.save()
 
-    const userId = req.user
-    const user = await User.findById(userId)
-    user.blogs = user.blogs.concat(blogId)
-
-    await user.save()
-    blog.user = userId
-    const result = await blog.save()
-    res.status(201).json(result)
+        res.status(201).json(savedBlog)
+    } catch (error) {
+        next(error)
+    }
 })
 
 blogsRouter.delete('/:id', async (req, res) => {
-    const blog = await Blog.findById(req.params.id)
+    const blogId = req.params.id
+    const blog = await Blog.findById(blogId)
 
     if (!blog) {
-        return res.status(404).json({ error: 'blog not found' })
+        return res
+            .status(404)
+            .json({ error: `Blog with id ${blogId} is not found.` })
     }
 
+    // check if the user initiated the request is the same as the blog user
     if (blog.user.toString() !== req.user.toString()) {
         return res.status(403).json({ error: 'Not permitted' })
     }
@@ -60,20 +70,24 @@ blogsRouter.delete('/:id', async (req, res) => {
 })
 
 blogsRouter.put('/:id', async (req, res) => {
-    const blogUpdates = req.body
-    const blog = await Blog.findById(req.params.id)
+    const body = req.body
+    const blogId = req.params.id
 
-    if (!blog) {
-        return res.status(404).end()
+    const existingBlog = await Blog.findById(blogId)
+
+    if (!existingBlog) {
+        return res
+            .status(404)
+            .json({ error: `Blog with id ${blogId} does not exist.` })
     }
 
     // Update only the fields that are provided
-    if (blogUpdates.title !== undefined) blog.title = blogUpdates.title
-    if (blogUpdates.author !== undefined) blog.author = blogUpdates.author
-    if (blogUpdates.url !== undefined) blog.url = blogUpdates.url
-    if (blogUpdates.likes !== undefined) blog.likes = blogUpdates.likes
+    if (body.title) existingBlog.title = body.title
+    if (body.author) existingBlog.author = body.author
+    if (body.url) existingBlog.url = body.url
+    if (body.likes) existingBlog.likes = body.likes
 
-    const updatedBlog = await blog.save()
+    const updatedBlog = await existingBlog.save()
     res.status(200).json(updatedBlog)
 })
 
