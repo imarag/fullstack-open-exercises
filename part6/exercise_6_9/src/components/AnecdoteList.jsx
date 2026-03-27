@@ -19,7 +19,11 @@ function Anecdote({ anecdote }) {
 }
 
 export default function AnecdoteList() {
-    const anecdotes = useSelector((state) => state)
+    const anecdotes = useSelector((state) => {
+        return state.filter
+            ? state.anecdotes.filter((an) => an.content.includes(state.filter))
+            : state.anecdotes
+    })
 
     return (
         <div>
